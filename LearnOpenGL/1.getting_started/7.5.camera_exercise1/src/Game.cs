@@ -11,9 +11,9 @@ public class Game
 {
     private GL _gl = Program.GL;
 
-    private Shader _ourShader = null!;
+    private Shader _ourShader;
 
-    private Camera _camera = null!;
+    private Camera _camera;
 
     private uint _texture1, _texture2;
 
@@ -85,7 +85,17 @@ public class Game
 
     public Game()
     {
-        
+        // construir e compilar nosso programa de shader
+        // --------------------------------------------------
+        _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
+            "res/Shaders/camera/vertex.glsl",
+            "res/Shaders/camera/fragment.glsl"
+        );
+
+        // camera
+        _camera = new Camera(new Vector3(0.0f, 0.0f, 3.0f));
+
+        Input.CursorLockMode = CursorLockMode.Raw;
     }
 
     public void Init()
@@ -93,13 +103,6 @@ public class Game
         // configurar estado global do OpenGL
         // --------------------------------------------------
         _gl.Enable(EnableCap.DepthTest);
-
-        // construir e compilar nosso programa de shader
-        // --------------------------------------------------
-        _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
-            "res/Shaders/camera/vertex.glsl",
-            "res/Shaders/camera/fragment.glsl"
-        );
 
         // carregar e criar uma textura
         // --------------------------------------------------
@@ -222,11 +225,6 @@ public class Game
             _gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), (void*)(3 * sizeof(float)));
         }
         _gl.EnableVertexAttribArray(1);
-
-        Input.CursorLockMode = CursorLockMode.Raw;
-
-        // camera
-        _camera = new Camera(new Vector3(0.0f, 0.0f, 3.0f));
     }
 
     // glfw: sempre que o tamanho da janela é alterado (pelo SO ou redimensionamento do usuário), esta função de callback é executada

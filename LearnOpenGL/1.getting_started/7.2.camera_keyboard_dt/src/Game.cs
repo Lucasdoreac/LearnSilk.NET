@@ -11,7 +11,7 @@ public class Game
 {
     private GL _gl = Program.GL;
 
-    private Shader _ourShader = null!;
+    private Shader _ourShader;
 
     private uint _texture1, _texture2;
 
@@ -88,7 +88,12 @@ public class Game
 
     public Game()
     {
-        
+        // construir e compilar nosso programa de shader
+        // --------------------------------------------------
+        _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
+            "res/Shaders/camera/vertex.glsl",
+            "res/Shaders/camera/fragment.glsl"
+        );
     }
 
     public void Init()
@@ -96,13 +101,6 @@ public class Game
         // configurar estado global do OpenGL
         // --------------------------------------------------
         _gl.Enable(EnableCap.DepthTest);
-
-        // construir e compilar nosso programa de shader
-        // --------------------------------------------------
-        _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
-            "res/Shaders/camera/vertex.glsl",
-            "res/Shaders/camera/fragment.glsl"
-        );
 
         // carregar e criar uma textura
         // --------------------------------------------------

@@ -9,7 +9,7 @@ public class Game
 {
     private GL _gl = Program.GL;
 
-    private Shader _ourShader = null!;
+    private Shader _ourShader;
 
     private uint _texture1, _texture2;
 
@@ -39,18 +39,16 @@ public class Game
 
     public Game()
     {
-        
-    }
-
-    public void Init()
-    {
         // construir e compilar nosso programa de shader
         // --------------------------------------------------
         _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
             "res/Shaders/texture/vertex.glsl",
             "res/Shaders/texture/fragment.glsl"
         );
+    }
 
+    public void Init()
+    {
         // carregar e criar uma textura
         // --------------------------------------------------
 

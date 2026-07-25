@@ -8,7 +8,7 @@ public class Game
 {
     private GL _gl = Program.GL;
 
-    private Shader _ourShader = null!;
+    private Shader _ourShader;
 
     // configurar dados de vértice (e buffer(s)) e configurar atributos de vértice
     // --------------------------------------------------
@@ -25,18 +25,16 @@ public class Game
 
     public Game()
     {
-        
-    }
-
-    public void Init()
-    {
         // construir e compilar nosso programa de shader
         // --------------------------------------------------
         _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
             "res/Shaders/shader/vertex.glsl",
             "res/Shaders/shader/fragment.glsl"
         );
+    }
 
+    public void Init()
+    {
         _gl.GenVertexArrays(1, out _vertexArrayObject);
         _gl.GenBuffers(1, out _vertexBufferObject);
 

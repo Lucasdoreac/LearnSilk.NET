@@ -1,8 +1,8 @@
-namespace MySilkProgram;
+namespace LearnSilkNET;
 
-public class MathHelper
+public static class MathHelper
 {
-    public static float DegressToRadians(float degress)
+    public static float DegreesToRadians(float degress)
     {
         return MathF.PI / 180.0f * degress;
     }
