@@ -145,7 +145,7 @@ public class Game
             "res/Shaders/base/fragment.glsl"
         );
 
-        _model = new Model("res/Objects/backpack/backpack.obj");
+        _model = new Model("res/Models/backpack/backpack.obj");
 
         /*
         // carregar e criar uma textura
