@@ -146,11 +146,11 @@ public class Program
 
         _shader = new Shader(_gl, "res/Shaders/shader.vert", "res/Shaders/shader.frag");
 
-        _texture = new Texture(_gl, "res/Textures/silk.png");
-        // _texture = new Texture(_gl, "res/Textures/arc_furnace_active.png");
+        // _texture = new Texture(_gl, "res/Textures/silk.png");
+        _texture = new Texture(_gl, "res/Textures/arc_furnace_active.png");
 
-        _model = new Model(_gl, "res/cube.model");
-        // _model = new Model(_gl, "res/arc_furnace.obj");
+        // _model = new Model(_gl, "res/cube.model");
+        _model = new Model(_gl, "res/arc_furnace.obj");
 
         // _gl.Enable(EnableCap.Blend);
         // _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);

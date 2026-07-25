@@ -1,92 +1,123 @@
 using System.Numerics;
-using MySilkProgram.Inputs;
-using MySilkProgram.Utilities;
-using Silk.NET.Input;
-using Silk.NET.Windowing;
+using LearnSilkNET.Inputs;
+using LearnSilkNET.Utilities;
 
-namespace MySilkProgram;
+namespace LearnSilkNET;
 
 // Uma classe de câmera abstrata que processa a entrada e calcula os ângulos de Euler, vetores e matrizes correspondentes para uso no OpenGL
 public class Camera
 {
-    // camera Attributes
-    public Vector3 Position = new Vector3(0.0f, 0.0f, 3.0f);
-    public Vector3 Front = new Vector3(0.0f, 0.0f, -1.0f);
-    public Vector3 Up = new Vector3(0.0f, 1.0f, 0.0f);
+    // Valores padrão da câmera
+    private const float YAW         = -90.0f;
+    private const float PITCH       = 0.0f;
+    private const float SPEED       = 2.5f;
+    private const float SENSITIVITY = 0.1f;
+    private const float ZOOM        = 45.0f;
 
-    // euler Angles
-    public float Yaw = -90.0f;
-    public float Pitch = 0.0f;
+    // Atributos da câmera
+    public Vector3 Position;
+    public Vector3 Front;
+    public Vector3 Up;
 
-    // camera options
-    public float MovementSpeed = 2.5f;
-    public float MouseSensitivity = 0.1f;
-    public float Zoom = 45.0f;
+    // Ângulos de Euler
+    public float Yaw;
+    public float Pitch;
+
+    // opções de câmera
+    public float MovementSpeed;
+    public float MouseSensitivity;
+    public float Zoom;
 
     private bool _firstMouse = true;
     private Vector2 _lastPos;
 
-    // constructor
-    public Camera()
+    // constructor with vectors
+    public Camera(Vector3? position = null, Vector3? up = null, float yaw = YAW, float pitch = PITCH)
     {
-        
+        Position = position ?? new Vector3(0.0f, 0.0f, 0.0f);
+        Up = up ?? new Vector3(0.0f, 1.0f, 0.0f);
+        Yaw = yaw;
+        Pitch = pitch;
+
+        Front = new Vector3(0.0f, 0.0f, -1.0f);
+        MovementSpeed = SPEED;
+        MouseSensitivity = SENSITIVITY;
+        Zoom = ZOOM;
+
+        UpdateCameraVectors();
+    }
+
+    // construtor com valores escalares
+    public Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch)
+    {
+        Position = new Vector3(posX, posY, posZ);
+        Up = new Vector3(upX, upY, upZ);
+        Yaw = yaw;
+        Pitch = pitch;
+
+        Front = new Vector3(0.0f, 0.0f, -1.0f);
+        MovementSpeed = SPEED;
+        MouseSensitivity = SENSITIVITY;
+        Zoom = ZOOM;
+
+        UpdateCameraVectors();
+    }
+
+    public void Update()
+    {
+        ProcessKeyboard();
+        ProcessMouseMovement();
+        ProcessMouseScroll();
     }
 
     // retorna a matriz de visualização calculada usando ângulos de Euler e a matriz LookAt
     public Matrix4x4 GetViewMatrix()
     {
         return Matrix4x4.CreateLookAt(
-            Position,
-            Position + Front,
-            Up
-        );
-    }
-
-    // retorna a matriz de projeção
-    public Matrix4x4 GetProjectionMatrix(IWindow window)
-    {
-        return Matrix4x4.CreatePerspectiveFieldOfView(
-            MathHelper.DegressToRadians(Zoom), 
-            (float)window.Size.X / (float)window.Size.Y, 
-            0.1f, 
-            100.0f
+            cameraPosition: Position, 
+            cameraTarget:   Position + Front, 
+            cameraUpVector: Up
         );
     }
 
     // processa a entrada recebida de qualquer sistema de entrada do tipo teclado. Aceita um parâmetro de entrada na forma de um ENUM definido pela câmera (para abstraí-lo de sistemas de janelas)
-    public void ProcessKeyboad()
+    private void ProcessKeyboard()
     {
-        float cameraSpeed = MovementSpeed * Time.DeltaTime;
+        float velocity = MovementSpeed * Time.DeltaTime;
 
-        if (Input.GetKey(Key.W))
+        Vector3 front = Vector3.Normalize(new Vector3(Front.X, 0.0f, Front.Z));
+        Vector3 right = Vector3.Normalize(Vector3.Cross(Front, Up));
+        Vector3 up = Up;
+
+        if (Input.GetKey(KeyCode.W))
         {
-            Position += cameraSpeed * Vector3.Normalize(new Vector3(Front.X, 0.0f, Front.Z));
+            Position += velocity * front;
         }
-        if (Input.GetKey(Key.S))
+        if (Input.GetKey(KeyCode.S))
         {
-            Position -= cameraSpeed * Vector3.Normalize(new Vector3(Front.X, 0.0f, Front.Z));
+            Position -= velocity * front;
         }
-        if (Input.GetKey(Key.A))
+        if (Input.GetKey(KeyCode.A))
         {
-            Position -= cameraSpeed * Vector3.Normalize(Vector3.Cross(Front, Up));
+            Position -= velocity * right;
         }
-        if (Input.GetKey(Key.D))
+        if (Input.GetKey(KeyCode.D))
         {
-            Position += cameraSpeed * Vector3.Normalize(Vector3.Cross(Front, Up));
+            Position += velocity * right;
         }
 
-        if (Input.GetKey(Key.Space))
+        if (Input.GetKey(KeyCode.Space))
         {
-            Position += cameraSpeed * Up;
+            Position += velocity * up;
         }
-        if (Input.GetKey(Key.ShiftLeft))
+        if (Input.GetKey(KeyCode.ShiftLeft))
         {
-            Position -= cameraSpeed * Up;
+            Position -= velocity * up;
         }
     }
 
     // processa a entrada recebida de um sistema de entrada de mouse. Espera o valor de deslocamento nas direções x e y.
-    public void ProcessMouseMovement()
+    private void ProcessMouseMovement(bool constrainPitch = true)
     {
         if (_firstMouse)
         {
@@ -95,39 +126,56 @@ public class Camera
         }
 
         float xoffset = Input.MousePositon.X - _lastPos.X;
-        float yoffset = _lastPos.Y - Input.MousePositon.Y;
+        float yoffset = _lastPos.Y - Input.MousePositon.Y; // invertido, já que as coordenadas y vão de baixo para cima
         _lastPos = Input.MousePositon;
 
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
 
-        Yaw   += xoffset;
+        Yaw += xoffset;
         Pitch += yoffset;
 
         // certifique-se de que a tela não seja invertida quando o pitch estiver fora dos limites
-        Pitch = Math.Clamp(Pitch, -89.0f, 89.0f);
+        if (constrainPitch)
+        {
+            if (Pitch > 89.0f)
+            {
+                Pitch = 89.0f;
+            }
+            if (Pitch < -89.0f)
+            {
+                Pitch = -89.0f;
+            }
+        }
 
         // atualiza os vetores Front, Right e Up usando os ângulos de Euler atualizados
         UpdateCameraVectors();
     }
 
     // processa a entrada recebida de um evento de roda de rolagem do mouse. Requer entrada apenas no eixo vertical da roda.
-    public void ProcessMouseScroll()
+    private void ProcessMouseScroll()
     {
         Zoom -= Input.MouseScrollDelta.Y;
-        Zoom = Math.Clamp(Zoom, 1.0f, 45.0f);
+
+        if (Zoom < 1.0f)
+        {
+            Zoom = 1.0f;
+        }
+        if (Zoom > 45.0f)
+        {
+            Zoom = 45.0f;
+        }
     }
 
     // calcula o vetor frontal a partir dos ângulos de Euler (atualizados) da câmera
     private void UpdateCameraVectors()
     {
         // calcula o novo vetor Front
-        Vector3 direction;
+        Vector3 front;
+        front.X = MathF.Cos(MathHelper.DegreesToRadians(Yaw)) * MathF.Cos(MathHelper.DegreesToRadians(Pitch));
+        front.Y = MathF.Sin(MathHelper.DegreesToRadians(Pitch));
+        front.Z = MathF.Sin(MathHelper.DegreesToRadians(Yaw)) * MathF.Cos(MathHelper.DegreesToRadians(Pitch));
 
-        direction.X = MathF.Cos(MathHelper.DegressToRadians(Pitch)) * MathF.Cos(MathHelper.DegressToRadians(Yaw));
-        direction.Y = MathF.Sin(MathHelper.DegressToRadians(Pitch));
-        direction.Z = MathF.Cos(MathHelper.DegressToRadians(Pitch)) * MathF.Sin(MathHelper.DegressToRadians(Yaw));
-
-        Front = Vector3.Normalize(direction);
+        Front = Vector3.Normalize(front);
     }
 }

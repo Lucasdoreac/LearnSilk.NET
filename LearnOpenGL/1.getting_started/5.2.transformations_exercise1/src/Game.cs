@@ -1,0 +1,263 @@
+using System.Numerics;
+using LearnSilkNET.Inputs;
+using LearnSilkNET.Utilities;
+using Silk.NET.Maths;
+using Silk.NET.OpenGL;
+using StbImageSharp;
+
+namespace LearnSilkNET;
+
+public class Game
+{
+    private GL _gl = Program.GL;
+
+    private Shader _ourShader = null!;
+
+    private uint _texture1, _texture2;
+
+    // configurar dados de vértice (e buffer(s)) e configurar atributos de vértice
+    // --------------------------------------------------
+    private float[] _vertices =
+    {
+        // positions           // texture coords
+        -0.5f, -0.5f,  0.0f,   0.0f, 0.0f,   // inferior esquerdo
+         0.5f, -0.5f,  0.0f,   1.0f, 0.0f,   // inferior direito
+         0.5f,  0.5f,  0.0f,   1.0f, 1.0f,   // superior direito
+        -0.5f,  0.5f,  0.0f,   0.0f, 1.0f    // superior esquerdo
+    };
+
+    private uint[] _indices =
+    {
+        0, 1, 2, // primeiro triangulo
+        0, 2, 3  // segundo triangulo
+    };
+
+    private uint _vertexArrayObject;
+    private uint _vertexBufferObject;
+    private uint _elementBufferObject;
+
+    public Game()
+    {
+        
+    }
+
+    public void Init()
+    {
+        // construir e compilar nosso programa de shader
+        // --------------------------------------------------
+        _ourShader = new Shader( // você pode nomear seus arquivos de shader como quiser
+            "res/Shaders/transform/vertex.glsl",
+            "res/Shaders/transform/fragment.glsl"
+        );
+
+        // carregar e criar uma textura
+        // --------------------------------------------------
+
+        // texture 1
+        // --------------------------------------------------
+        _gl.GenTextures(1, out _texture1);
+        _gl.BindTexture(TextureTarget.Texture2D, _texture1);
+
+        // define os parâmetros de repetição da textura
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+
+        // definir parâmetros de filtragem de textura
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+        // carregar imagem, criar textura e gerar mipmaps
+        int width, height;
+        byte[] data;
+
+        StbImage.stbi_set_flip_vertically_on_load(1); // instrui a stb_image.h a inverter as texturas carregadas no eixo Y.
+
+        using (FileStream stream = File.OpenRead("res/Textures/container.jpg"))
+        {
+            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlue);
+
+            width = image.Width;
+            height = image.Height;
+            data = image.Data;
+        }
+
+        if (data != null)
+        {
+            unsafe
+            {
+                fixed (byte* ptr = data)
+                {
+                    _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgb, (uint)width, (uint)height, 0, PixelFormat.Rgb, PixelType.UnsignedByte, ptr);
+                }
+            }
+            _gl.GenerateMipmap(TextureTarget.Texture2D);
+        }
+        else
+        {
+            Console.WriteLine("Falha ao carregar a textura");
+        }
+
+        // texture 2
+        // --------------------------------------------------
+        _gl.GenTextures(1, out _texture2);
+        _gl.BindTexture(TextureTarget.Texture2D, _texture2);
+
+        // define os parâmetros de repetição da textura
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+
+        // definir parâmetros de filtragem de textura
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        
+        // carregar imagem, criar textura e gerar mipmaps
+        using (FileStream stream = File.OpenRead("res/Textures//awesomeface.png"))
+        {
+            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+
+            width = image.Width;
+            height = image.Height;
+            data = image.Data;
+        }
+
+        if (data != null)
+        {
+            unsafe
+            {
+                fixed (byte* ptr = data)
+                {
+                    // observe que o awesomeface.png possui transparência e, portanto, um canal alfa; certifique-se de informar ao OpenGL que o tipo de dado é GL_RGBA
+                    _gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)width, (uint)height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+                }
+            }
+            _gl.GenerateMipmap(TextureTarget.Texture2D);
+        }
+        else
+        {
+            Console.WriteLine("Falha ao carregar a textura");
+        }
+
+        // informar ao OpenGL, para cada sampler, a qual unidade de textura ele pertence (isso só precisa ser feito uma vez)
+        // --------------------------------------------------
+        _ourShader.Use();
+        _ourShader.SetInt("texture1", 0);
+        _ourShader.SetInt("texture2", 1);
+
+        _gl.GenVertexArrays(1, out _vertexArrayObject);
+        _gl.GenBuffers(1, out _vertexBufferObject);
+        _gl.GenBuffers(1, out _elementBufferObject);
+
+        // primeiro vincule o Vertex Array Object, depois vincule e configure o(s) buffer(s) de vértices e, em seguida, configure o(s) atributo(s) de vértice.
+        _gl.BindVertexArray(_vertexArrayObject);
+
+        _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBufferObject);
+        unsafe
+        {
+           fixed (float* buf = _vertices)
+            {
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (uint)(_vertices.Length * sizeof(float)), buf, BufferUsageARB.StaticDraw);
+            }
+        }
+
+        _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, _elementBufferObject);
+        unsafe
+        {
+           fixed (uint* buf = _indices)
+            {
+                _gl.BufferData(BufferTargetARB.ElementArrayBuffer, (uint)(_indices.Length * sizeof(uint)), buf, BufferUsageARB.StaticDraw);
+            }
+        }
+
+        // position attribute
+        unsafe
+        {
+            _gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), (void*)0);
+        }
+        _gl.EnableVertexAttribArray(0);
+
+        // texture coord attribute
+        unsafe
+        {
+            _gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+        }
+        _gl.EnableVertexAttribArray(1);
+    }
+
+    // glfw: sempre que o tamanho da janela é alterado (pelo SO ou redimensionamento do usuário), esta função de callback é executada
+    // --------------------------------------------------
+    public void Resize(Vector2D<int> newSize)
+    {
+        // certifique-se de que a viewport corresponda às novas dimensões da janela; observe que a largura e a altura serão significativamente maiores do que as especificadas em telas Retina.
+        _gl.Viewport(0, 0, (uint)newSize.X, (uint)newSize.Y);
+    }
+
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Program.Close();
+        }
+    }
+
+    public void Render()
+    {
+        _gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        _gl.Clear(ClearBufferMask.ColorBufferBit);
+        
+        // renderizar contêiner
+
+        _ourShader.Use();
+
+        // criar transformações
+        Matrix4x4 transform = Matrix4x4.Identity;
+        transform *= Matrix4x4.CreateTranslation(new Vector3(0.5f, -0.5f, 0.0f)); // inverti a ordem
+        transform *= Matrix4x4.CreateFromAxisAngle(new Vector3(0.0f, 0.0f, 1.0f), Time.ElapsedTime); // inverti a ordem
+
+        // obtém a localização do uniform da matriz e define a matriz
+        int transformLoc = _gl.GetUniformLocation(_ourShader.ID, "transform");
+        unsafe
+        {
+            _gl.UniformMatrix4(transformLoc, 1, false, (float*)&transform);
+        }
+
+        /*
+        Por que nosso contêiner agora gira na tela?:
+        == ===================================================
+        Lembre-se de que a multiplicação de matrizes é aplicada na ordem inversa. Assim, desta vez, uma translação é aplicada primeiro ao contêiner, posicionando-o no canto inferior direito da tela. Após a translação, a rotação é aplicada ao contêiner já transladado.
+
+        Uma transformação de rotação também é conhecida como transformação de mudança de base
+        quando analisamos a álgebra linear mais aprofundadamente. Como estamos alterando a
+        base do contêiner, as translações subsequentes moverão o contêiner
+        com base nos novos vetores da base. Uma vez que o vetor esteja levemente rotacionado,
+        as translações verticais também ocorrerão de forma inclinada, por exemplo.
+
+        Se aplicássemos as rotações primeiro, elas ocorreriam em torno da origem de rotação (0,0,0);
+        mas, como o contêiner é transladado antes, sua origem de rotação deixa de ser (0,0,0),
+        fazendo com que ele pareça girar em torno da origem da cena.
+
+        Se você teve dificuldade para visualizar ou compreender isso, não se preocupe. Ao
+        experimentar com transformações, você logo pegará o jeito; tudo o que é preciso
+        é prática e experiência.
+        */
+
+        // vincular texturas às unidades de textura correspondentes
+        _gl.ActiveTexture(TextureUnit.Texture0);
+        _gl.BindTexture(TextureTarget.Texture2D, _texture1);
+        _gl.ActiveTexture(TextureUnit.Texture1);
+        _gl.BindTexture(TextureTarget.Texture2D, _texture2);
+
+        _gl.BindVertexArray(_vertexArrayObject);
+        unsafe
+        {
+            _gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+        }
+    }
+
+    public void Clear()
+    {
+        // opcional: desalocar todos os recursos assim que não forem mais necessários:
+        // --------------------------------------------------
+        _gl.DeleteVertexArrays(1, ref _vertexArrayObject);
+        _gl.DeleteBuffers(1, ref _vertexBufferObject);
+    }
+}

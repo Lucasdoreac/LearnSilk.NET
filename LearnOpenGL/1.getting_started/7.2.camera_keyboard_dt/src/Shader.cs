@@ -1,43 +1,39 @@
 using System.Numerics;
 using Silk.NET.OpenGL;
 
-namespace MySilkProgram;
+namespace LearnSilkNET;
 
-public class Shader : IDisposable
+public class Shader
 {
-    private GL _gl = Game.GL;
+    private GL _gl = Program.GL;
 
-    private uint _program;
+    public uint ID;
 
-    // O construtor gera o shader em tempo de execução.
-    // ------------------------------------------------------------------------
+    // o construtor gera o shader em tempo de execução
+    // --------------------------------------------------
     public Shader(string vertexPath, string fragmentPath)
     {
         // 1. recuperar o código-fonte do vértice/fragmento a partir de filePath
-
-        string vShaderCode = string.Empty;
-        string fShaderCode = string.Empty;
+        string vertexCode = string.Empty;
+        string fragmentCode = string.Empty;
 
         try
         {
-            // open files
-            vShaderCode = File.ReadAllText(vertexPath);
-            fShaderCode = File.ReadAllText(fragmentPath);
+            vertexCode = File.ReadAllText(vertexPath);
+            fragmentCode = File.ReadAllText(fragmentPath);
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            Console.WriteLine(
-                "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" + "\n" +
-                ex + "\n" + 
-                " -- --------------------------------------------------- -- "
-            );
+            Console.WriteLine("ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " + e.Message);
         }
+
+        string vShaderCode = vertexCode;
+        string fShaderCode = fragmentCode;
 
         // 2. compilar shaders
-
         uint vertex, fragment;
 
-        // vertex Shader
+        // vertex shader
         vertex = _gl.CreateShader(ShaderType.VertexShader);
         _gl.ShaderSource(vertex, vShaderCode);
         _gl.CompileShader(vertex);
@@ -50,11 +46,11 @@ public class Shader : IDisposable
         CheckCompileErrors(fragment, "FRAGMENT");
 
         // shader Program
-        _program = _gl.CreateProgram();
-        _gl.AttachShader(_program, vertex);
-        _gl.AttachShader(_program, fragment);
-        _gl.LinkProgram(_program);
-        CheckCompileErrors(_program, "PROGRAM");
+        ID = _gl.CreateProgram();
+        _gl.AttachShader(ID, vertex);
+        _gl.AttachShader(ID, fragment);
+        _gl.LinkProgram(ID);
+        CheckCompileErrors(ID, "PROGRAM");
 
         // exclua os shaders, pois eles já estão vinculados ao nosso programa e não são mais necessários
         _gl.DeleteShader(vertex);
@@ -62,52 +58,76 @@ public class Shader : IDisposable
     }
 
     // ativa o shader
-    // ------------------------------------------------------------------------
+    // --------------------------------------------------
     public void Use()
     {
-        _gl.UseProgram(_program);
+        _gl.UseProgram(ID);
     }
 
     // funções utilitárias de uniformes
-    // ------------------------------------------------------------------------
-
+    // --------------------------------------------------
     public void SetBool(string name, bool value)
     {
-        int location = _gl.GetUniformLocation(_program, name);
+        int location = _gl.GetUniformLocation(ID, name);
         _gl.Uniform1(location, value ? 1 : 0);
     }
-
+    // --------------------------------------------------
     public void SetInt(string name, int value)
     {
-        int location = _gl.GetUniformLocation(_program, name);
+        int location = _gl.GetUniformLocation(ID, name);
         _gl.Uniform1(location, value);
     }
-
+    // --------------------------------------------------
     public void SetFloat(string name, float value)
     {
-        int location = _gl.GetUniformLocation(_program, name);
+        int location = _gl.GetUniformLocation(ID, name);
         _gl.Uniform1(location, value);
     }
-
-    public void SetMatrix4x4(string name, Matrix4x4 matrix)
+    // --------------------------------------------------
+    public void setVec2(string name, Vector2 value)
     {
-        int location = _gl.GetUniformLocation(_program, name);
+        int location = _gl.GetUniformLocation(ID, name);
+        _gl.Uniform2(location, value);
+    }
+    public void setVec2(string name, float x, float y)
+    {
+        int location = _gl.GetUniformLocation(ID, name);
+        _gl.Uniform2(location, x, y);
+    }
+    // --------------------------------------------------
+    public void setVec3(string name, Vector3 value)
+    {
+        int location = _gl.GetUniformLocation(ID, name);
+        _gl.Uniform3(location, value);
+    }
+    public void setVec3(string name, float x, float y, float z)
+    {
+        int location = _gl.GetUniformLocation(ID, name);
+        _gl.Uniform3(location, x, y, z);
+    }
+    // --------------------------------------------------
+    public void setVec4(string name, Vector4 value)
+    {
+        int location = _gl.GetUniformLocation(ID, name);
+        _gl.Uniform4(location, value);
+    }
+    public void setVec4(string name, float x, float y, float z, float w)
+    {
+        int location = _gl.GetUniformLocation(ID, name);
+        _gl.Uniform4(location, x, y, z, w);
+    }
+    // --------------------------------------------------
+    public void setMat4(string name, Matrix4x4 mat)
+    {
+        int location = _gl.GetUniformLocation(ID, name);
         unsafe
         {
-            _gl.UniformMatrix4(location, 1, false, (float*)&matrix);
+            _gl.UniformMatrix4(location, 1, false, (float*)&mat);
         }
     }
 
-    //
-    // ------------------------------------------------------------------------
-
-    public void Dispose()
-    {
-        _gl.DeleteProgram(_program);
-    }
-
     // função utilitária para verificar erros de compilação/vinculação de shaders.
-    // ------------------------------------------------------------------------
+    // --------------------------------------------------
     private void CheckCompileErrors(uint shader, string type)
     {
         int success;
@@ -120,8 +140,8 @@ public class Shader : IDisposable
             {
                 _gl.GetShaderInfoLog(shader, out infoLog);
                 Console.WriteLine(
-                    "ERROR::SHADER_COMPILATION_ERROR of type: " + type + "\n" + 
-                    infoLog + "\n" + 
+                    "ERROR::SHADER_COMPILATION_ERROR of type: " + type + "\n" +
+                    infoLog + "\n" +
                     " -- --------------------------------------------------- -- "
                 );
             }
@@ -134,7 +154,7 @@ public class Shader : IDisposable
                 _gl.GetProgramInfoLog(shader, out infoLog);
                 Console.WriteLine(
                     "ERROR::PROGRAM_LINKING_ERROR of type: " + type + "\n" +
-                    infoLog + "\n" + 
+                    infoLog + "\n" +
                     " -- --------------------------------------------------- -- "
                 );
             }
