@@ -88,10 +88,17 @@ public class Model
             vector.Z = mesh->MVertices[i].Z;
             vertex.Position = vector;
 
-            vector.X = mesh->MNormals[i].X;
-            vector.Y = mesh->MNormals[i].Y;
-            vector.Z = mesh->MNormals[i].Z;
-            vertex.Normal = vector;
+            if (mesh->MNormals != null) // a malha contém normais?
+            {
+                vector.X = mesh->MNormals[i].X;
+                vector.Y = mesh->MNormals[i].Y;
+                vector.Z = mesh->MNormals[i].Z;
+                vertex.Normal = vector;
+            }
+            else
+            {
+                vertex.Normal = new Vector3(0.0f, 0.0f, 0.0f);
+            }
 
             if (mesh->MTextureCoords[0] != null) // a malha contém coordenadas de textura?
             {

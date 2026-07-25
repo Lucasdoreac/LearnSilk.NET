@@ -298,9 +298,16 @@ public class Game
         _gl.BindVertexArray(_planeVAO);
         _gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
 
-        _gl.Enable(EnableCap.StencilTest);
-
         // windows (do mais distante para o mais próximo)
+        // --------------------------------------------------
+        // o blending só produz o resultado correto se as superfícies transparentes
+        // forem desenhadas de trás para frente: uma janela próxima desenhada antes
+        // grava no depth buffer e descarta as janelas mais distantes atrás dela.
+        Array.Sort(_vegetation, (a, b) =>
+            Vector3.DistanceSquared(_camera.Position, b)
+                .CompareTo(Vector3.DistanceSquared(_camera.Position, a))
+        );
+
         _gl.ActiveTexture(TextureUnit.Texture0);
         _gl.BindTexture(TextureTarget.Texture2D, _transparentTexture);
 
@@ -321,8 +328,10 @@ public class Game
         // --------------------------------------------------
         _gl.DeleteVertexArrays(1, ref _cubeVAO);
         _gl.DeleteVertexArrays(1, ref _planeVAO);
+        _gl.DeleteVertexArrays(1, ref _transparentVAO);
         _gl.DeleteBuffers(1, ref _cubeVBO);
         _gl.DeleteBuffers(1, ref _planeVBO);
+        _gl.DeleteBuffers(1, ref _transparentVBO);
     }
 
     // função utilitária para carregar uma textura 2D a partir de um arquivo
@@ -377,8 +386,14 @@ public class Game
             }
             _gl.GenerateMipmap(TextureTarget.Texture2D);
 
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+            // texturas com alpha usam ClampToEdge: com Repeat, a filtragem linear
+            // busca o lado oposto da imagem e deixa uma borda semitransparente no topo da janela
+            TextureWrapMode wrapMode = pixelFormat == PixelFormat.Rgba
+                ? TextureWrapMode.ClampToEdge
+                : TextureWrapMode.Repeat;
+
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)wrapMode);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)wrapMode);
             _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
             _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         }

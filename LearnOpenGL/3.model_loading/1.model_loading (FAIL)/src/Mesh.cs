@@ -58,7 +58,7 @@ public class Mesh
                 number = (specularNr++).ToString();
             }
 
-            shader.SetInt(("material." + name + number), i);
+            shader.SetInt(name + number, i);
 
             _gl.BindTexture(TextureTarget.Texture2D, Textures[i].id);
         }
@@ -93,7 +93,7 @@ public class Mesh
         {
             fixed (byte* buf = byteSpan)
             {
-                _gl.BufferData(BufferTargetARB.ArrayBuffer, (uint)(Vertices.Count * sizeof(float)), buf, BufferUsageARB.StaticDraw);
+                _gl.BufferData(BufferTargetARB.ArrayBuffer, (uint)byteSpan.Length, buf, BufferUsageARB.StaticDraw);
             }
         }
 
