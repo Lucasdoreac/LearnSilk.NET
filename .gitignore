@@ -480,3 +480,8 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Modelos Wavefront (.obj) usados como assets 3D.
+# A regra "*.obj" acima existe para object files de C/C++ e acabava ignorando
+# silenciosamente os modelos do capitulo de model loading.
+!**/res/**/*.obj

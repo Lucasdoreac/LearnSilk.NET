@@ -145,7 +145,10 @@ public class Game
             "res/Shaders/base/fragment.glsl"
         );
 
-        _model = new Model("res/M/backpack/backpack.obj");
+        // informa ao stb_image para inverter as texturas carregadas no eixo y (antes de carregar o modelo)
+        StbImage.stbi_set_flip_vertically_on_load(1);
+
+        _model = new Model("res/Objects/backpack/backpack.obj");
 
         /*
         // carregar e criar uma textura
