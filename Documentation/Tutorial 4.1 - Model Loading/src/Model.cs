@@ -1,3 +1,4 @@
+using System.IO;
 using System.Numerics;
 using Silk.NET.Assimp;
 using Silk.NET.OpenGL;
@@ -22,9 +23,52 @@ public class Model : IDisposable
         LoadModel(path);
     }
 
+    private string ResolvePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            return path;
+        }
+
+        var currentDirectory = System.IO.Directory.GetCurrentDirectory();
+        var candidates = new[]
+        {
+            Path.Combine(currentDirectory, path),
+            Path.Combine(AppContext.BaseDirectory, path)
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (System.IO.File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            var candidate = Path.Combine(directory.FullName, path);
+            if (System.IO.File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return path;
+    }
+
     private unsafe void LoadModel(string path)
     {
-        var scene = _assimp.ImportFile(path, (uint)PostProcessSteps.Triangulate);
+        var resolvedPath = ResolvePath(path);
+        var scene = _assimp.ImportFile(resolvedPath, (uint)PostProcessSteps.Triangulate);
 
         if (scene == null || scene->MFlags == Assimp.SceneFlagsIncomplete || scene->MRootNode == null)
         {
@@ -32,7 +76,7 @@ public class Model : IDisposable
             throw new Exception(error);
         }
 
-        Directory = path;
+        Directory = Path.GetDirectoryName(resolvedPath) ?? string.Empty;
 
         ProcessNode(scene->MRootNode, scene);
     }
@@ -163,10 +207,22 @@ public class Model : IDisposable
             _assimp.GetMaterialTexture(mat, type, i, &path, null, null, null, null, null, null);
 
             bool skip = false;
+            var texturePath = path.ToString();
+
+            if (string.IsNullOrWhiteSpace(texturePath))
+            {
+                continue;
+            }
+
+            var resolvedTexturePath = texturePath;
+            if (!Path.IsPathRooted(texturePath))
+            {
+                resolvedTexturePath = Path.Combine(Directory, texturePath);
+            }
 
             for (int j = 0; j < _textureLoaded.Count; j++)
             {
-                if (_textureLoaded[j].Path == path)
+                if (_textureLoaded[j].Path == resolvedTexturePath)
                 {
                     textures.Add(_textureLoaded[j]);
                     skip = true;
@@ -175,8 +231,8 @@ public class Model : IDisposable
             }
             if(!skip)
             {
-                var texture = new Texture(_gl, Directory, type);
-                texture.Path = path;
+                var texture = new Texture(_gl, ResolvePath(resolvedTexturePath), type);
+                texture.Path = ResolvePath(resolvedTexturePath);
                 textures.Add(texture);
                 _textureLoaded.Add(texture);
             }

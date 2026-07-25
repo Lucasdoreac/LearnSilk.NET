@@ -7,6 +7,7 @@ https://github.com/dotnet/Silk.NET/blob/main/examples/CSharp/OpenGL%20Tutorials/
 # endregion
 
 using System.Drawing;
+using System.IO;
 using System.Numerics;
 using Silk.NET.Input;
 using Silk.NET.Maths;
@@ -100,6 +101,48 @@ public class Program
 
     private static Model _model;
 
+    private static string ResolvePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            return path;
+        }
+
+        var currentDirectory = System.IO.Directory.GetCurrentDirectory();
+        var candidates = new[]
+        {
+            Path.Combine(currentDirectory, path),
+            Path.Combine(AppContext.BaseDirectory, path)
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (System.IO.File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory != null)
+        {
+            var candidate = Path.Combine(directory.FullName, path);
+            if (System.IO.File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return path;
+    }
+
     private static void Main(string[] args)
     {
         WindowOptions options = WindowOptions.Default;        
@@ -144,13 +187,11 @@ public class Program
 
         _gl.ClearColor(Color.CornflowerBlue);
 
-        _shader = new Shader(_gl, "res/Shaders/shader.vert", "res/Shaders/shader.frag");
+        _shader = new Shader(_gl, ResolvePath("res/Shaders/shader.vert"), ResolvePath("res/Shaders/shader.frag"));
 
-        // _texture = new Texture(_gl, "res/Textures/silk.png");
-        _texture = new Texture(_gl, "res/Textures/arc_furnace_active.png");
+        _texture = new Texture(_gl, ResolvePath("res/Textures/silk.png"));
 
-        // _model = new Model(_gl, "res/cube.model");
-        _model = new Model(_gl, "res/arc_furnace.obj");
+        _model = new Model(_gl, ResolvePath("res/cube.model"));
 
         // _gl.Enable(EnableCap.Blend);
         // _gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
@@ -248,7 +289,7 @@ public class Program
             // _shader.SetUniform("uView", view);
             // _shader.SetUniform("uProjection", projection);
 
-            _gl.DrawArrays(PrimitiveType.Triangles, 0, (uint)mesh.Vertices.Length);
+            _gl.DrawElements(PrimitiveType.Triangles, (uint)mesh.Indices.Length, DrawElementsType.UnsignedInt, (void*)0);
         }
 
         // _gl.DrawElements(PrimitiveType.Triangles, (uint)_indices.Length, DrawElementsType.UnsignedInt, (void*)0);
